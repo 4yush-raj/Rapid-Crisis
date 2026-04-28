@@ -1,19 +1,38 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 
-const Login = () => {
+const AdminAuth = () => {
+  const [hasAdmin, setHasAdmin] = useState(true);
+  const [loading, setLoading] = useState(true);
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    checkAdmin();
+  }, []);
+
+  const checkAdmin = async () => {
+    try {
+      const res = await api.get('admin/check/');
+      setHasAdmin(res.data.has_admin);
+    } catch (err) {
+      console.error("Failed to check admin status", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,16 +41,24 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      if (isSignUp) {
-        await api.post('users/', { username, email, password });
-        setSuccess('Account created successfully. You can now sign in.');
-        setIsSignUp(false);
+      if (!hasAdmin) {
+        // Bootstrap admin
+        await api.post('admin/bootstrap/', { username, email, password });
+        setSuccess('Admin account created successfully. You can now sign in.');
+        setHasAdmin(true);
         setUsername('');
         setPassword('');
         setEmail('');
       } else {
-        await login(username, password);
-        navigate('/dashboard');
+        // Regular staff/admin login
+        const res = await login(username, password);
+        // Only allow staff or admin to login via this portal
+        const userRes = await api.get('users/me/');
+        if (userRes.data.role === 'admin' || userRes.data.role === 'staff') {
+          navigate('/admin/dashboard');
+        } else {
+          setError('Access denied. This portal is for administrative and staff accounts only.');
+        }
       }
     } catch (err) {
       if (err.response?.status === 400) {
@@ -39,21 +66,23 @@ const Login = () => {
       } else if (err.response?.status === 401) {
         setError('Invalid username or password.');
       } else {
-        setError('Connection failed. Ensure Django backend is running on port 8000.');
+        setError('Connection failed or unauthorized.');
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (loading) return <div className="loader-container"><div className="spinner"></div></div>;
+
   return (
     <div className="auth-container">
       <div style={{ display: 'flex', width: '100%', maxWidth: '900px', boxShadow: 'var(--shadow-lg)', borderRadius: '1.5rem', overflow: 'hidden' }}>
-
+        
         {/* Left Side Brand Panel */}
-        <div style={{
-          background: 'radial-gradient(circle at bottom right, #312e81, var(--color-primary))',
-          padding: '4rem',
+        <div style={{ 
+          background: 'radial-gradient(circle at bottom right, #111827, #374151)', 
+          padding: '4rem', 
           color: 'white',
           flex: '1.2',
           display: 'flex',
@@ -64,27 +93,24 @@ const Login = () => {
           <div style={{ position: 'relative', zIndex: 10 }}>
             <ShieldAlert size={48} color="#ffffff" style={{ marginBottom: '1.5rem' }} />
             <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontFamily: 'var(--font-heading)', lineHeight: '1.1' }}>
-              Rapid<br />Crisis<br />Response
+              System<br/>Administration
             </h1>
             <p style={{ opacity: 0.85, fontSize: '1.05rem', lineHeight: '1.5' }}>
-              A premium dashboard for incident tracking, guest alerts, and real-time emergency mitigation.
+              Secure portal for administrative staff and management.
             </p>
           </div>
           <div style={{ position: 'relative', zIndex: 10, alignSelf: 'flex-start', background: 'rgba(255,255,255,0.1)', padding: '0.75rem 1.25rem', borderRadius: '2rem', fontSize: '0.85rem', fontWeight: 500, letterSpacing: '0.05em', backdropFilter: 'blur(5px)' }}>
-            SECURE SYSTEM PORTAL
+            RESTRICTED ACCESS
           </div>
-          {/* Abstract decor */}
-          <div style={{ position: 'absolute', top: '-10%', right: '-15%', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', filter: 'blur(20px)' }}></div>
-          <div style={{ position: 'absolute', bottom: '-5%', left: '-10%', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', filter: 'blur(15px)' }}></div>
         </div>
 
         {/* Right Side Form */}
         <div className="card-surface" style={{ flex: '1', borderRadius: '0', padding: '3.5rem 3rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <h2 style={{ fontSize: '1.75rem', fontFamily: 'var(--font-heading)', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            {!hasAdmin ? 'System Bootstrap' : 'Admin Portal Login'}
           </h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>
-            {isSignUp ? 'Register to manage crisis systems.' : 'Enter your credentials to continue.'}
+            {!hasAdmin ? 'Initialize the first administrator account.' : 'Enter your staff credentials.'}
           </p>
 
           {error && <div className="page-alert error" style={{ padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{error}</div>}
@@ -96,48 +122,26 @@ const Login = () => {
               <input id="username" type="text" value={username} onChange={e => setUsername(e.target.value)} required placeholder="e.g. admin" className="form-input" />
             </div>
 
-            {isSignUp && (
+            {!hasAdmin && (
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" htmlFor="email">Email</label>
-                <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="e.g. user@example.com" className="form-input" />
+                <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="e.g. admin@example.com" className="form-input" />
               </div>
-
             )}
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="form-label" htmlFor="password">Password</label>
-                {!isSignUp && <a href="#" style={{ fontSize: '0.8rem', color: 'var(--color-primary)', textDecoration: 'none' }}>Forgot?</a>}
-              </div>
+              <label className="form-label" htmlFor="password">Password</label>
               <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="form-input" />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', padding: '0.85rem' }} disabled={isSubmitting}>
-              {isSubmitting ? (isSignUp ? 'Creating...' : 'Authenticating...') : (isSignUp ? 'Sign Up' : 'Sign In')}
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', padding: '0.85rem', background: '#1f2937', borderColor: '#111827' }} disabled={isSubmitting}>
+              {isSubmitting ? 'Authenticating...' : (!hasAdmin ? 'Initialize Admin' : 'Sign In')}
             </button>
           </form>
-
-          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-            </span>
-            <button
-              type="button"
-              className="btn btn-link"
-              style={{ color: 'var(--color-primary)', marginLeft: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError('');
-                setSuccess('');
-              }}
-            >
-              {isSignUp ? 'Sign In' : 'Create one'}
-            </button>
-          </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 
-export default Login;
+export default AdminAuth;

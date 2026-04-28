@@ -31,6 +31,7 @@ const MOCK_INCIDENTS = [
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const prefix = (user?.role === 'admin' || user?.role === 'staff') ? '/admin' : '';
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterPriority, setFilterPriority] = useState('all');
@@ -268,7 +269,7 @@ const Dashboard = () => {
           )}
           {user && (
             <Link 
-              to="/incidents/create" 
+              to={`${prefix}/incidents/create`} 
               className="btn" 
               style={{ background: 'white', color: 'var(--color-primary)', padding: '0.85rem 1.5rem', fontSize: '1rem', fontWeight: 600, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
             >
@@ -370,7 +371,7 @@ const Dashboard = () => {
               <span className="text-muted">
                 {incident.created_at ? formatDistanceToNow(new Date(incident.created_at), { addSuffix: true }) : ''}
               </span>
-              <Link to={`/incidents/${incident.id}`} className="btn btn-secondary">
+              <Link to={`${prefix}/incidents/${incident.id}`} className="btn btn-secondary">
                 View Details
               </Link>
             </div>
