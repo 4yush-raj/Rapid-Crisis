@@ -53,10 +53,10 @@ const CreateIncident = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      navigate('/dashboard');
+      navigate(user?.role === 'admin' || user?.role === 'staff' ? '/admin/dashboard' : '/dashboard');
     } catch (err) {
       console.error(err);
-      navigate('/dashboard');
+      navigate(user?.role === 'admin' || user?.role === 'staff' ? '/admin/dashboard' : '/dashboard');
     } finally {
       setIsSubmitting(false);
     }

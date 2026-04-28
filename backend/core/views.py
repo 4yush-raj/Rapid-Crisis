@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from .permissions import IsAdmin, IsStaff
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import timedelta, datetime
 
@@ -24,6 +25,29 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+class AdminCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        has_admin = User.objects.filter(role='admin').exists()
+        return Response({'has_admin': has_admin})
+
+class AdminBootstrapView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        if User.objects.filter(role='admin').exists():
+            return Response({'detail': 'Admin already exists.'}, status=400)
+        
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.role = 'admin'
+            user.save()
+            return Response({'message': 'Bootstrap admin created.', 'user': UserSerializer(user).data}, status=201)
+        return Response(serializer.errors, status=400)
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(role__in=['admin', 'staff'])
