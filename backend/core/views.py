@@ -32,13 +32,41 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create':
-            return [permissions.AllowAny()]
+            return [permissions.AllowAny()]  # Public registration allowed
+        elif self.action in ['update', 'partial_update', 'destroy', 'promote_to_staff', 'promote_to_admin']:
+            return [permissions.IsAuthenticated, IsAdmin]  # Only admin can modify roles
         return [permission() for permission in self.permission_classes]
 
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
         return UserSerializer
+
+    def perform_create(self, serializer):
+        # Admin bootstrapping is handled in serializer
+        serializer.save()
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    def create_staff(self, request):
+        """Only ADMIN can create STAFF users"""
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.role = 'staff'
+            user.save()
+            return Response({'message': 'Staff user created', 'user': UserSerializer(user).data}, status=201)
+        return Response(serializer.errors, status=400)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, IsAdmin])
+    def create_admin(self, request):
+        """Only ADMIN can create other ADMIN users"""
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.role = 'admin'
+            user.save()
+            return Response({'message': 'Admin user created', 'user': UserSerializer(user).data}, status=201)
+        return Response(serializer.errors, status=400)
 
     @action(detail=False, methods=['get'])
     def staff_list(self, request):

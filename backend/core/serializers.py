@@ -6,11 +6,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'password', 'email', 'role', 'phone', 'department', 'age', 'gender']
+        fields = ['id', 'username', 'password', 'email', 'phone', 'department', 'age', 'gender']
+        read_only_fields = ['id']
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
+        
+        # All public registrations default to guest role
+        # Admin bootstrapping is handled via separate endpoint
+        role = 'guest'
+        
+        user = User(role=role, **validated_data)
         user.set_password(password)
         user.save()
         return user

@@ -2,6 +2,7 @@
 # Create your models here.
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.conf import settings
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -40,7 +41,7 @@ class Incident(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
-    image = models.ImageField(upload_to='incidents/', null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True)  # Store ImageKit URL
     location = models.CharField(max_length=255)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
