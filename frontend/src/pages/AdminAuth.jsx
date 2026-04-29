@@ -119,7 +119,7 @@ const AdminAuth = () => {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" htmlFor="username">Username</label>
-              <input id="username" type="text" value={username} onChange={e => setUsername(e.target.value)} required placeholder="e.g. admin" className="form-input" />
+              <input id="username" type="text" value={username} onChange={e => setUsername(e.target.value)} required placeholder="use admin as username" className="form-input" />
             </div>
 
             {!hasAdmin && (
@@ -131,7 +131,7 @@ const AdminAuth = () => {
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" htmlFor="password">Password</label>
-              <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="form-input" />
+              <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="password is Test@1234" className="form-input" />
             </div>
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', padding: '0.85rem', background: '#1f2937', borderColor: '#111827' }} disabled={isSubmitting}>
